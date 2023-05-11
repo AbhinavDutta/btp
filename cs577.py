@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[6]:
+
 
 import sys
 import numpy as np
@@ -7,14 +12,9 @@ import random
 import solcx
 solcx.install_solc('0.4.22')  # install a specific version of the Solidity compiler
 solcx.set_solc_version('0.4.22')
-import nltk
-from sklearn.feature_extraction.text import CountVectorizer
-import networkx as nx
-from sklearn.cluster import AgglomerativeClustering 
-from sklearn.preprocessing import StandardScaler, normalize
-from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
-import editdistance
+
+
+# In[59]:
 
 
 def hash_kmer(kmer):
@@ -52,13 +52,28 @@ def lsh(kmers):
     return kmers[kmers.index(min(kmers))]
 
 
+# In[ ]:
+
+
+
+
+
+# In[18]:
+
 
 data = pd.read_csv('s2.csv',dtype=str,header=0)
 data.head()
 len(data)
 
+
+# In[23]:
+
+
 data = pd.read_csv('btp/61k.csv',dtype=str,header=0)
 len(data)
+
+
+# In[81]:
 
 
 i=0
@@ -123,6 +138,10 @@ for i in range(0,n):
     
 
 
+# In[85]:
+
+
+
 for i in range(0,len(bytecode)):
     kmer_s = build_kmers(bytecode[i],4)
     if(len(kmer_s)>1200):
@@ -131,13 +150,22 @@ for i in range(0,len(bytecode)):
     
 
 
+# In[86]:
+
 
 jacc = np.zeros(n*n)
 jacc = jacc.reshape(n,n)
 
 hamm = np.zeros(n*n)
 hamm = hamm.reshape(n,n)
+n
 
+
+# In[87]:
+
+
+
+import editdistance
 for j in range(0,n):
     for k in range(0,n):
         jacc[j][k] = 1-jaccard_similarity(dict_code_kmers[j],dict_code_kmers[k])
@@ -152,6 +180,10 @@ jacc
 # In[88]:
 
 
+from sklearn.cluster import AgglomerativeClustering 
+from sklearn.preprocessing import StandardScaler, normalize
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 
 '''
 X = np.array(jacc)
@@ -359,6 +391,13 @@ solcx.get_solc_version(True)
 print(data['code'][0])
 
 
+# In[20]:
+
+
+import solcx
+import nltk
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
 
 # compile the contract and get the source code
 contract_source_code = data['code'][0]
@@ -378,4 +417,105 @@ bow = vectorizer.fit_transform([' '.join(tokens)]).toarray()
 bow_array = np.array(bow[0])
 print(bow)
 print(bow_array)
+
+
+# In[25]:
+
+
+import solcx
+import networkx as nx
+
+# Set the Solidity compiler version
+
+# Read the Solidity source code from the file
+
+
+# Compile the Solidity source code
+source_code = data['code'][0]
+compiled_sol = solcx.compile_source(source_code)
+
+# Get the AST of the contract
+ast = compiled_sol['<stdin>:Greeter']['ast']
+print(ast)
+# Build a control flow graph from the AST
+g = nx.DiGraph()
+for node in ast['children']:
+    if node['nodeType'] == 'FunctionDefinition':
+        function_name = node['name']
+        function_body = node['body']['statements']
+        for i, statement in enumerate(function_body):
+            if statement['nodeType'] == 'ExpressionStatement' and statement['expression']['nodeType'] == 'FunctionCall':
+                callee = statement['expression']['expression']['referencedDeclaration']
+                g.add_edge(function_name, callee)
+
+# Extract features from the control flow graph
+in_degrees = dict(g.in_degree)
+out_degrees = dict(g.out_degree)
+number_of_nodes = len(g.nodes)
+number_of_edges = len(g.edges)
+
+# Convert the features into a vector representation
+feature_vector = [in_degrees, out_degrees, number_of_nodes, number_of_edges]
+
+print(feature_vector)
+
+
+# In[28]:
+
+
+from gensim.models import KeyedVectors as word2vec
+vectors_text_path = '/home/abhinav/Desktop/btp/code/btp/token_vecs.txt'
+model = word2vec.load_word2vec_format(vectors_text_path, binary=False)
+
+
+# In[35]:
+
+
+from gensim.models import Word2Vec
+model_ted = Word2Vec(sentences=sentences_ted, size=100, window=5, min_count=5, workers=4, sg=0)
+
+
+# In[37]:
+
+
+import solcx
+import networkx as nx
+
+# Set the Solidity compiler version
+
+# Read the Solidity source code from the file
+source_code = data['code'][0]
+# Compile the Solidity source code
+compiled_sol = solcx.compile_source(source_code)
+
+# Get the AST of the contract
+ast = compiled_sol['<stdin>:MyContract']['ast']
+
+# Build a control flow graph from the AST
+g = nx.DiGraph()
+for node in ast['children']:
+    if node['nodeType'] == 'FunctionDefinition':
+        function_name = node['name']
+        function_body = node['body']['statements']
+        for i, statement in enumerate(function_body):
+            if statement['nodeType'] == 'ExpressionStatement' and statement['expression']['nodeType'] == 'FunctionCall':
+                callee = statement['expression']['expression']['referencedDeclaration']
+                g.add_edge(function_name, callee)
+
+# Extract features from the control flow graph
+in_degrees = dict(g.in_degree)
+out_degrees = dict(g.out_degree)
+number_of_nodes = len(g.nodes)
+number_of_edges = len(g.edges)
+
+# Convert the features into a vector representation
+feature_vector = [in_degrees, out_degrees, number_of_nodes, number_of_edges]
+
+print(feature_vector)
+
+
+# In[ ]:
+
+
+
 
